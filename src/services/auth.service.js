@@ -7,13 +7,27 @@ import { createApiError } from '../utils/ApiError.js';
 
 const SALT_ROUNDS = 10;
 
-const generateToken = (user) => {
+const tokenPayload = (user) => ({ id: user.id, email: user.email, role: user.role });
+
+const generateAccessToken = (user) => {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    tokenPayload(user),
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m' }
   );
 };
+
+const generateRefreshToken = (user) => jwt.sign(
+  tokenPayload(user),
+  process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+  { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
+);
+
+const createAuthResult = (user) => ({
+  user,
+  accessToken: generateAccessToken(user),
+  refreshToken: generateRefreshToken(user),
+});
 
 const signup = async ({ name, email, password, role,  }) => {
   const existingResult = await pgPool.query(
@@ -37,8 +51,7 @@ const signup = async ({ name, email, password, role,  }) => {
   const user = insertResult.rows[0];
   if (!user) throw createApiError(500, 'Failed to create account');
 
-  const token = generateToken(user);
-  return { user, token };
+  return createAuthResult(user);
 };
 
 const login = async ({ email, password }) => {
@@ -53,10 +66,19 @@ const login = async ({ email, password }) => {
   const isMatch = await bcrypt.compare(password, user.password_hash);
   if (!isMatch) throw createApiError(401, 'Invalid email or password');
 
-  const token = generateToken(user);
   delete user.password_hash;
 
-  return { user, token };
+  return createAuthResult(user);
 };
 
-export default { signup, login };
+const refresh = (refreshToken) => {
+  if (!refreshToken) throw createApiError(401, 'Refresh token missing');
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    return generateAccessToken(decoded);
+  } catch (error) {
+    throw createApiError(401, 'Invalid or expired refresh token');
+  }
+};
+
+export default { signup, login, refresh };

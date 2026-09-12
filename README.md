@@ -9,6 +9,7 @@ See [RFQ_WORKFLOW.md](RFQ_WORKFLOW.md) for the complete buyer/supplier workflow 
 - Backend: Node.js, Express, ES modules
 - Database: Neon PostgreSQL with `pg` connection pooling
 - Authentication: JWT and bcryptjs
+- Authentication: short-lived access JWTs with an `httpOnly` refresh-token cookie
 - Validation: Joi
 - Frontend: React and Axios in the sibling `learning` project
 
@@ -46,6 +47,17 @@ npm start
 The API runs at `http://localhost:5000`; the React app runs at `http://localhost:3000`.
 
 Set `REACT_APP_API_URL` in the frontend environment when the API is hosted elsewhere.
+
+Set these authentication variables in the API environment:
+
+- `JWT_SECRET`: access-token signing secret
+- `JWT_REFRESH_SECRET`: separate refresh-token signing secret
+- `ACCESS_TOKEN_EXPIRES_IN`: normally `15m`
+- `REFRESH_TOKEN_EXPIRES_IN`: normally `7d`
+- `NODE_ENV=production` for secure cross-site cookies
+
+The frontend sends credentials with API requests. Configure `CLIENT_ORIGIN` to
+the frontend origin without a trailing slash.
 
 ## API Overview
 
