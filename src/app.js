@@ -22,7 +22,7 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 
 
-app.post('/api/health', (req, res) => {
+app.get('/api/health', (req, res) => {
     res.status(200).json({ message: 'Server is healthy' });
 });
 app.use('/api/auth', authRoutes);
